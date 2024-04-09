@@ -10,12 +10,7 @@ class Visualizer:
             maze_sizeX: int,
             maze_sizeY: int,
             tileSize: int,
-            start: tuple[int, int],
-            end: tuple[int, int],
-            mode: Literal['manhattan', 'diagonal', 'euclidean', 'dijkstra'],
             diagonals: bool,
-            outlineWidth: int = 3,
-            debug: bool = False
         ):
 
         pygame.init()
@@ -24,7 +19,7 @@ class Visualizer:
 
         # Setup
         self.tileSize = tileSize
-        self.outlineWidth = outlineWidth
+        self.outlineWidth = 2
 
         self.maze_sizeX = maze_sizeX
         self.maze_sizeY = maze_sizeY
@@ -33,11 +28,7 @@ class Visualizer:
 
         self.screen = pygame.display.set_mode((self.maze_sizeX * self.tileSize, self.maze_sizeY * self.tileSize))
 
-        self.mode = 1 if mode == 'manhattan' else\
-                    2 if mode == 'diagonal' else\
-                    3 if mode == 'euclidean' else\
-                    4
-
+        self.mode = 0
         self.modes: tuple[
             Literal['manhattan'],
             Literal['diagonal'],
@@ -45,9 +36,15 @@ class Visualizer:
             Literal['dijkstra']
         ] = ('manhattan', 'diagonal', 'euclidean', 'dijkstra')
 
-        # Maze init
+        # Maze stuff
         self.maze: dict[tuple[int, int], bool] = {(x, y): False for y in range(self.maze_sizeY) for x in range(self.maze_sizeX)}
-        self.solver = AStarSolver(self.maze, start, end, self.modes[self.mode])
+        self.solver = AStarSolver(
+            maze      = self.maze,
+            start     = (0, 0),
+            end       = (self.maze_sizeX - 1, self.maze_sizeY - 1),
+            mode      = self.modes[self.mode],
+            diagonals = self.diagonals
+        )
 
         # Pressed keys
         self.keys = {
@@ -56,9 +53,9 @@ class Visualizer:
         }
 
         # Misc
-        self.mode_font = pygame.font.SysFont(None, 30)
+        self.info_font = pygame.font.SysFont(None, 30)
         self.debug_font = pygame.font.SysFont(None, 20)
-        self.debug = debug
+        self.debug = False
 
     def save_maze(self):
         with open('maze.json', 'w') as f:
@@ -148,6 +145,14 @@ class Visualizer:
                     if event.key == pygame.K_d:
                         self.debug = not self.debug
 
+                    if event.key == pygame.K_PERIOD:
+                        self.frame_time -= 0.01
+                        if self.frame_time < 0:
+                            self.frame_time = 0
+
+                    if event.key == pygame.K_COMMA:
+                        self.frame_time += 0.01
+
                     if not start:
                         if event.key == pygame.K_s and (pygame.key.get_mods() & pygame.KMOD_CTRL):
                             self.save_maze()
@@ -195,52 +200,53 @@ class Visualizer:
             self.draw_maze()
 
             if start and dt > self.frame_time:
-                if not self.solver.done1:
-                    self.solver.choose_next_tile(diagonals = True)
+                if not self.solver.no_path:
+                    if not self.solver.done1:
+                        self.solver.choose_next_tile()
 
-                elif not self.solver.done2:
-                    self.solver.get_path(self.solver.end)
+                    elif not self.solver.done2:
+                        self.solver.get_path(self.solver.end)
 
-            self.screen.blit(
-                self.mode_font.render(
-                    'Mode: ' + self.modes[self.mode].replace('_', ' ').title(),
-                    True, (200, 125, 50)
-                ), (2, 2)
-            )
+            # Display mode
+            self.screen.blit(self.info_font.render(
+                'Mode: ' + self.modes[self.mode].replace('_', ' ').title(),
+                True, (200, 125, 50)
+            ), (2, 2))
+
+            # Display time per frame
+            self.screen.blit(self.info_font.render(
+                'Speed: ' + str(round(1 / self.frame_time, 3)) if self.frame_time != 0 else 'unlimited',
+                True, (200, 125, 50)
+            ), (2, 22))
 
             if self.debug:
                 for coords in self.solver.open | self.solver.closed:
                     g, h = self.solver.get_g(coords), self.solver.get_h(self.modes[self.mode], coords)
                     self.screen.blit(self.debug_font.render(
                         str(round(g + h)),
-                        True, (255, 0, 255)
-                        ), (coords[0] * self.tileSize + 20, coords[1] * self.tileSize + 5)
+                        True, (255, 255, 255)
+                        ), (coords[0] * self.tileSize + 10, coords[1] * self.tileSize)
                     )
 
                     self.screen.blit(self.debug_font.render(
                         str(round(g)),
-                        True, (255, 0, 255)
-                        ), (coords[0] * self.tileSize + 20, coords[1] * self.tileSize + 30)
+                        True, (255, 255, 255)
+                        ), (coords[0] * self.tileSize + 10, coords[1] * self.tileSize + 14)
                     )
 
                     self.screen.blit(self.debug_font.render(
                         str(round(h)),
-                        True, (255, 0, 255)
-                        ), (coords[0] * self.tileSize + 20, coords[1] * self.tileSize + 55)
+                        True, (255, 255, 255)
+                        ), (coords[0] * self.tileSize + 10, coords[1] * self.tileSize + 28)
                     )
 
             pygame.display.update()
 
 if __name__ == '__main__':
     Visualizer(
-        frame_time   = 0.01,
-        maze_sizeX   = 20,
-        maze_sizeY   = 20,
-        tileSize     = 45,
-        start        = (1, 1),
-        end          = (18, 18),
-        mode         = 'euclidean',
-        diagonals    = False,
-        outlineWidth = 2,
-        debug        = False
+        frame_time = 0.04,
+        maze_sizeX = 20,
+        maze_sizeY = 20,
+        tileSize   = 45,
+        diagonals  = True,
     ).run()
