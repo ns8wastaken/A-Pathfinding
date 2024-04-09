@@ -6,7 +6,15 @@ def _round(x: float):
     return int(x + 0.5)
 
 class AStarSolver:
-    def __init__(self, maze: dict[tuple[int, int], bool], start: tuple[int, int], end: tuple[int, int], mode: Literal['manhattan', 'diagonal', 'euclidean', 'dijkstra']):
+    def __init__(
+            self,
+            maze: dict[tuple[int, int], bool],
+            start: tuple[int, int],
+            end: tuple[int, int],
+            mode: Literal['manhattan', 'diagonal', 'euclidean', 'dijkstra'],
+            diagonals: bool
+        ):
+
         self.maze = maze
 
         self.start = start
@@ -16,11 +24,14 @@ class AStarSolver:
         self.closed: dict[tuple[int, int], tuple[int, int]] = dict()
         self.path = []
 
+        self.no_path = False
         self.done1 = False
         self.done2 = False
 
         self.cost_orthogonal = 10
         self.cost_diagonal = 14
+
+        self.diagonals = diagonals
 
         self.mode: Literal['manhattan', 'diagonal', 'euclidean', 'dijkstra'] = mode
 
@@ -38,6 +49,7 @@ class AStarSolver:
         self.open = {self.start: self.start}
         self.closed.clear()
         self.path.clear()
+        self.no_path = False
         self.done1 = False
         self.done2 = False
 
@@ -51,12 +63,12 @@ class AStarSolver:
 
         self.done2 = True
 
-    def get_neighbors(self, coords: tuple[int, int], diagonals: bool):
+    def get_neighbors(self, coords: tuple[int, int]):
         neighbor_offsets = (
             (-1, -1), (0, -1), (1, -1),
             (1, 0), (1, 1), (0, 1),
             (-1, 1), (-1, 0)
-        ) if diagonals else (
+        ) if self.diagonals else (
             (0, -1), (1, 0), (0, 1), (-1, 0)
         )
 
@@ -115,11 +127,18 @@ class AStarSolver:
 
         return cost
 
-    def choose_next_tile(self, diagonals: bool):
+    def choose_next_tile(self):
+        # Stop if done
         if self.end in self.closed:
             self.done1 = True
             return
 
+        # Stop if there is no path
+        elif not self.open:
+            self.no_path = True
+            return
+
+        # Get smallest f and h costs
         min_f = float('inf')
         min_h = float('inf')
         min_coords_f: list[tuple[int, int]] = []
@@ -153,11 +172,13 @@ class AStarSolver:
                 elif h == min_h:
                     coords_h.append(coords)
 
+        # Close the chosen open node (based on f cost)
         if len(min_coords_f) == 1:
             self.closed.update({min_coords_f[0]: self.open.pop(min_coords_f[0])})
-            self.open.update(self.get_neighbors(min_coords_f[0], diagonals))
+            self.open.update(self.get_neighbors(min_coords_f[0]))
 
+        # Close the chosen open node (based on h cost)
         else:
             coords = random.choice(coords_h)
             self.closed.update({coords: self.open.pop(coords)})
-            self.open.update(self.get_neighbors(coords, diagonals))
+            self.open.update(self.get_neighbors(coords))
