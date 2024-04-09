@@ -19,7 +19,6 @@ class Visualizer:
 
         pygame.init()
         pygame.display.set_caption('A* Visualizer')
-        pygame.display.set_icon(pygame.image.load('A Star.png'))
         self.fps = fps
         self.frame_count = 0
 
