@@ -1,5 +1,5 @@
-import pygame, time
-import json
+import pygame, json
+from typing import Literal
 
 from AStar import AStarSolver
 
@@ -7,7 +7,7 @@ class Visualizer:
     def __init__(
             self,
             fps: int,
-            maze_sizeX:int,
+            maze_sizeX: int,
             maze_sizeY: int,
             tileSize: int,
             start: tuple[int, int],
