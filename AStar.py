@@ -6,7 +6,7 @@ def _round(x: float):
     return int(x + 0.5)
 
 class AStarSolver:
-    def __init__(self, maze: dict[tuple[int, int], bool], start: tuple[int, int], end: tuple[int, int], mode: Literal['manhattan', 'diagonal', 'euclidian', 'dijkstra']):
+    def __init__(self, maze: dict[tuple[int, int], bool], start: tuple[int, int], end: tuple[int, int], mode: Literal['manhattan', 'diagonal', 'euclidean', 'dijkstra']):
         self.maze = maze
 
         self.start = start
@@ -22,9 +22,9 @@ class AStarSolver:
         self.cost_orthogonal = 10
         self.cost_diagonal = 14
 
-        self.mode = mode
+        self.mode: Literal['manhattan', 'diagonal', 'euclidean', 'dijkstra'] = mode
 
-    def set_mode(self, mode: Literal['manhattan', 'diagonal', 'euclidian', 'dijkstra']):
+    def set_mode(self, mode: Literal['manhattan', 'diagonal', 'euclidean', 'dijkstra']):
         self.mode = mode
 
     def update_maze(self, maze: dict[tuple[int, int], bool]):
@@ -67,6 +67,7 @@ class AStarSolver:
             if neighbor_pos in self.closed:
                 continue
 
+            # Re-parent the node if the g cost is lower than before
             elif neighbor_pos in self.open:
                 if self.get_g(neighbor_pos) > self.get_g(coords) + (self.cost_diagonal if self.is_diagonal(coords, neighbor_pos) else self.cost_orthogonal):
                     self.open[neighbor_pos] = coords
@@ -78,7 +79,7 @@ class AStarSolver:
     def is_diagonal(self, _from: tuple[int, int], _to: tuple[int, int]):
         return (_to[0] - _from[0] != 0) and (_to[1] - _from[1] != 0)
 
-    def get_h(self, mode: Literal['manhattan', 'diagonal', 'euclidian', 'dijkstra'], coords: tuple[int, int]) -> float:
+    def get_h(self, mode: Literal['manhattan', 'diagonal', 'euclidean', 'dijkstra'], coords: tuple[int, int]) -> float:
         match mode:
             case 'manhattan':
                 return (abs(coords[0] - self.end[0]) + abs(coords[1] - self.end[1])) * self.cost_orthogonal
@@ -86,9 +87,9 @@ class AStarSolver:
             case 'diagonal':
                 dx = abs(coords[0] - self.end[0])
                 dy = abs(coords[1] - self.end[1])
-                return ((dx + dy) + (1.4 - 2) * min(dx, dy)) * self.cost_orthogonal
+                return self.cost_orthogonal * (dx + dy) + (self.cost_diagonal - 2 * self.cost_orthogonal) * min(dx, dy)
 
-            case 'euclidian':
+            case 'euclidean':
                 return sqrt((self.end[0] - coords[0])**2 + (self.end[1] - coords[1])**2) * self.cost_orthogonal
 
             case 'dijkstra':
@@ -127,7 +128,7 @@ class AStarSolver:
         _f = []
         for coords in self.open:
             g = _round(self.get_g(coords))
-            h = _round(self.get_h('manhattan', coords))
+            h = _round(self.get_h(self.mode, coords))
             f = g + h
             _f.append(f)
 
