@@ -19,7 +19,10 @@
 <h3>Save / Load walls:</h3>
 <kbd>Ctrl + S</kbd> / <kbd>Ctrl + O</kbd>
 
-<h3>Toggle Debug Mode:</h3>
+<h3>Change heuristics mode:</h3>
+<kbd>Tab</kbd> / <kbd>Shift Tab</kbd>
+
+<h3>Toggle debug mode:</h3>
 <kbd>D</kbd>
 
 <h3>Change outline width:</h3>
