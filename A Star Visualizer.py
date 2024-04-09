@@ -1,5 +1,5 @@
 import pygame, time
-import json, pickle
+import json
 
 from AStar import AStarSolver
 
@@ -12,13 +12,13 @@ class Visualizer:
             tileSize: int,
             start: tuple[int, int],
             end: tuple[int, int],
+            mode: Literal['manhattan', 'diagonal', 'euclidian', 'dijkstra'],
             outlineWidth: int = 3,
             debug: bool = False
         ):
 
         pygame.init()
         pygame.display.set_caption('A* Visualizer')
-        pygame.display.set_icon(pygame.image.load('A Star.png'))
         self.fps = fps
         self.frame_count = 0
 
@@ -31,12 +31,9 @@ class Visualizer:
 
         self.screen = pygame.display.set_mode((self.maze_sizeX * self.tileSize, self.maze_sizeY * self.tileSize))
 
-        # Maze init
+        # Maze setup
         self.maze: dict[tuple[int, int], bool] = {(x, y): False for y in range(self.maze_sizeY) for x in range(self.maze_sizeX)}
-
         self.solver = AStarSolver(self.maze, start, end)
-
-        self.font = pygame.font.SysFont('jetbrainsmonoregular', 20)
 
         # Pressed keys
         self.keys = {
@@ -44,7 +41,10 @@ class Visualizer:
             'right_mouse_held': False
         }
 
+        # Font for debugging
         self.debug = debug
+        if self.debug:
+            self.font = pygame.font.SysFont(None, 32)
 
     def save_maze(self):
         with open('maze.json', 'w') as f:
@@ -90,15 +90,10 @@ class Visualizer:
     def run(self):
         clock = pygame.time.Clock()
 
-        _previous_time = time.time()
-
         start = False
 
         while True:
             clock.tick(self.fps)
-
-            dt = time.time() - _previous_time
-            _previous_time = time.time()
 
             self.frame_count += 1
 
@@ -163,7 +158,7 @@ class Visualizer:
 
             self.draw_maze()
 
-            if start and self.frame_count % 60 == 0:
+            if start and self.frame_count % 5 == 0:
                 if not self.solver.done1:
                     self.solver.choose_next_tile(diagonals = True)
 
@@ -172,23 +167,23 @@ class Visualizer:
 
             if self.debug:
                 for coords in self.solver.open | self.solver.closed:
-                    g, h = self.solver.get_g(coords), self.solver.get_h('manhattan', coords)
+                    g, h = self.solver.get_g(coords), self.solver.get_h(self.mode, coords)
                     self.screen.blit(self.font.render(
                         str(round(g + h)),
                         True, (255, 0, 255)
-                        ), (coords[0] * self.tileSize, coords[1] * self.tileSize)
+                        ), (coords[0] * self.tileSize + 20, coords[1] * self.tileSize + 5)
                     )
 
                     self.screen.blit(self.font.render(
                         str(round(g)),
                         True, (255, 0, 255)
-                        ), (coords[0] * self.tileSize, coords[1] * self.tileSize + 25)
+                        ), (coords[0] * self.tileSize + 20, coords[1] * self.tileSize + 30)
                     )
 
                     self.screen.blit(self.font.render(
                         str(round(h)),
                         True, (255, 0, 255)
-                        ), (coords[0] * self.tileSize, coords[1] * self.tileSize + 50)
+                        ), (coords[0] * self.tileSize + 20, coords[1] * self.tileSize + 55)
                     )
 
             pygame.display.update()
@@ -201,6 +196,7 @@ if __name__ == '__main__':
         tileSize     = 80,
         start        = (5, 4),
         end          = (2, 1),
+        mode         = 'dijkstra',
         outlineWidth = 3,
-        debug        = True
+        debug        = False
     ).run()
