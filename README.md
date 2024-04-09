@@ -18,3 +18,9 @@
 
 <h3>Save / Load walls:</h3>
 <kbd>Ctrl + S</kbd> / <kbd>Ctrl + O</kbd>
+
+<h3>Toggle Debug Mode:</h3>
+<kbd>D</kbd>
+
+<h3>Change outline width:</h3>
+<kbd>Ctrl + Mouse Scroll</kbd>
