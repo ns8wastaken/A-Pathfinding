@@ -6,7 +6,7 @@ def _round(x: float):
     return int(x + 0.5)
 
 class AStarSolver:
-    def __init__(self, maze: dict[tuple[int, int], bool], start: tuple[int, int], end: tuple[int, int]):
+    def __init__(self, maze: dict[tuple[int, int], bool], start: tuple[int, int], end: tuple[int, int], mode: Literal['manhattan', 'diagonal', 'euclidian', 'dijkstra']):
         self.maze = maze
 
         self.start = start
@@ -21,6 +21,11 @@ class AStarSolver:
 
         self.cost_orthogonal = 10
         self.cost_diagonal = 14
+
+        self.mode = mode
+
+    def set_mode(self, mode: Literal['manhattan', 'diagonal', 'euclidian', 'dijkstra']):
+        self.mode = mode
 
     def update_maze(self, maze: dict[tuple[int, int], bool]):
         self.maze = maze
