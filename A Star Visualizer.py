@@ -19,6 +19,7 @@ class Visualizer:
 
         pygame.init()
         pygame.display.set_caption('A* Visualizer')
+        pygame.display.set_icon(pygame.image.load('A Star.png'))
         self.fps = fps
         self.frame_count = 0
 
@@ -31,9 +32,11 @@ class Visualizer:
 
         self.screen = pygame.display.set_mode((self.maze_sizeX * self.tileSize, self.maze_sizeY * self.tileSize))
 
-        # Maze setup
+        self.mode: Literal['manhattan', 'diagonal', 'euclidian', 'dijkstra'] = mode
+
+        # Maze init
         self.maze: dict[tuple[int, int], bool] = {(x, y): False for y in range(self.maze_sizeY) for x in range(self.maze_sizeX)}
-        self.solver = AStarSolver(self.maze, start, end)
+        self.solver = AStarSolver(self.maze, start, end, self.mode)
 
         # Pressed keys
         self.keys = {
@@ -41,7 +44,6 @@ class Visualizer:
             'right_mouse_held': False
         }
 
-        # Font for debugging
         self.debug = debug
         if self.debug:
             self.font = pygame.font.SysFont(None, 32)
@@ -191,12 +193,12 @@ class Visualizer:
 if __name__ == '__main__':
     Visualizer(
         fps          = 60,
-        maze_sizeX   = 8,
-        maze_sizeY   = 6,
-        tileSize     = 80,
-        start        = (5, 4),
-        end          = (2, 1),
+        maze_sizeX   = 20,
+        maze_sizeY   = 20,
+        tileSize     = 45,
+        start        = (1, 1),
+        end          = (19, 19),
         mode         = 'dijkstra',
-        outlineWidth = 3,
+        outlineWidth = 2,
         debug        = False
     ).run()
