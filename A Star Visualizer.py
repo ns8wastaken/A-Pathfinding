@@ -1,4 +1,4 @@
-import pygame, json
+import pygame, time, json
 from typing import Literal
 
 from AStar import AStarSolver
@@ -6,21 +6,19 @@ from AStar import AStarSolver
 class Visualizer:
     def __init__(
             self,
-            fps: int,
+            frame_time: float,
             maze_sizeX: int,
             maze_sizeY: int,
             tileSize: int,
             start: tuple[int, int],
             end: tuple[int, int],
-            mode: Literal['manhattan', 'diagonal', 'euclidian', 'dijkstra'],
+            mode: Literal['manhattan', 'diagonal', 'euclidean', 'dijkstra'],
             outlineWidth: int = 3,
             debug: bool = False
         ):
 
         pygame.init()
         pygame.display.set_caption('A* Visualizer')
-        self.fps = fps
-        self.frame_count = 0
 
         # Setup
         self.tileSize = tileSize
@@ -31,11 +29,23 @@ class Visualizer:
 
         self.screen = pygame.display.set_mode((self.maze_sizeX * self.tileSize, self.maze_sizeY * self.tileSize))
 
-        self.mode: Literal['manhattan', 'diagonal', 'euclidian', 'dijkstra'] = mode
+        self.mode = 1 if mode == 'manhattan' else\
+                    2 if mode == 'diagonal' else\
+                    3 if mode == 'euclidean' else\
+                    4
+
+        self.modes: tuple[
+            Literal['manhattan'],
+            Literal['diagonal'],
+            Literal['euclidean'],
+            Literal['dijkstra']
+        ] = ('manhattan', 'diagonal', 'euclidean', 'dijkstra')
+
+        self.frame_time = frame_time
 
         # Maze init
         self.maze: dict[tuple[int, int], bool] = {(x, y): False for y in range(self.maze_sizeY) for x in range(self.maze_sizeX)}
-        self.solver = AStarSolver(self.maze, start, end, self.mode)
+        self.solver = AStarSolver(self.maze, start, end, self.modes[self.mode])
 
         # Pressed keys
         self.keys = {
@@ -91,12 +101,16 @@ class Visualizer:
     def run(self):
         clock = pygame.time.Clock()
 
+        _previous_time = time.time()
+
         start = False
 
         while True:
-            clock.tick(self.fps)
+            clock.tick(0)
 
-            self.frame_count += 1
+            dt = time.time() - _previous_time
+            if dt > self.frame_time:
+                _previous_time = time.time()
 
             mx, my = pygame.mouse.get_pos()
 
@@ -106,7 +120,7 @@ class Visualizer:
                     return
 
                 if event.type == pygame.KEYDOWN:
-                    if (event.key == pygame.K_q and pygame.key.get_mods() & pygame.KMOD_CTRL) or event.key == pygame.K_ESCAPE:
+                    if event.key == pygame.K_q and (pygame.key.get_mods() & pygame.KMOD_CTRL):
                         pygame.quit()
                         return
 
@@ -117,19 +131,28 @@ class Visualizer:
                         self.solver.reset()
                         start = False
 
-                    if event.key == pygame.K_s:
-                        self.save_maze()
+                    if event.key == pygame.K_ESCAPE:
+                        self.maze = {(x, y): False for y in range(self.maze_sizeY) for x in range(self.maze_sizeX)}
+                        self.solver.reset()
+                        self.solver.update_maze(self.maze)
 
-                    if event.key == pygame.K_o:
-                        self.load_maze()
+                    if event.key == pygame.K_TAB:
+                        self.maze = {(x, y): False for y in range(self.maze_sizeY) for x in range(self.maze_sizeX)}
 
-                    if event.key == pygame.K_1:
-                        tile_hover = (mx // self.tileSize, my // self.tileSize)
-                        self.solver.update_start(tile_hover)
+                    if not start:
+                        if event.key == pygame.K_s and (pygame.key.get_mods() & pygame.KMOD_CTRL):
+                            self.save_maze()
 
-                    if event.key == pygame.K_2:
-                        tile_hover = (mx // self.tileSize, my // self.tileSize)
-                        self.solver.end = tile_hover
+                        if event.key == pygame.K_o and (pygame.key.get_mods() & pygame.KMOD_CTRL):
+                            self.load_maze()
+
+                        if event.key == pygame.K_1:
+                            tile_hover = (mx // self.tileSize, my // self.tileSize)
+                            self.solver.update_start(tile_hover)
+
+                        if event.key == pygame.K_2:
+                            tile_hover = (mx // self.tileSize, my // self.tileSize)
+                            self.solver.end = tile_hover
 
                 if not start:
                     if event.type == pygame.MOUSEBUTTONDOWN:
@@ -159,7 +182,7 @@ class Visualizer:
 
             self.draw_maze()
 
-            if start and self.frame_count % 5 == 0:
+            if start and dt > self.frame_time:
                 if not self.solver.done1:
                     self.solver.choose_next_tile(diagonals = True)
 
@@ -168,7 +191,7 @@ class Visualizer:
 
             if self.debug:
                 for coords in self.solver.open | self.solver.closed:
-                    g, h = self.solver.get_g(coords), self.solver.get_h(self.mode, coords)
+                    g, h = self.solver.get_g(coords), self.solver.get_h(self.modes[self.mode], coords)
                     self.screen.blit(self.font.render(
                         str(round(g + h)),
                         True, (255, 0, 255)
@@ -191,13 +214,13 @@ class Visualizer:
 
 if __name__ == '__main__':
     Visualizer(
-        fps          = 60,
+        frame_time   = 0.1,
         maze_sizeX   = 20,
         maze_sizeY   = 20,
         tileSize     = 45,
         start        = (1, 1),
-        end          = (19, 19),
-        mode         = 'dijkstra',
+        end          = (18, 18),
+        mode         = 'manhattan',
         outlineWidth = 2,
         debug        = False
     ).run()
