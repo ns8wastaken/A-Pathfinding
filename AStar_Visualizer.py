@@ -1,4 +1,4 @@
-import pygame, time, json
+import pygame, time, json, os
 from typing import Literal
 
 from AStar_Solver import AStarSolver
@@ -15,6 +15,7 @@ class Visualizer:
 
         pygame.init()
         pygame.display.set_caption('A* Visualizer')
+        pygame.display.set_icon(pygame.image.load('icon.png'))
         self.frame_time = frame_time
 
         # Setup
@@ -62,12 +63,15 @@ class Visualizer:
             json.dump({f'{key[0]};{key[1]}': val for key, val in self.maze.items()}, f)
 
     def load_maze(self):
-        with open('maze.json', 'r') as f:
-            self.maze.clear()
-            for key, val in json.load(f).items():
-                key = key.split(';')
-                key = (int(key[0]), int(key[1]))
-                self.maze[key] = val
+        if os.path.exists('maze.json'):
+            with open('maze.json', 'r') as f:
+                self.maze.clear()
+                for key, val in json.load(f).items():
+                    key = key.split(';')
+                    key = (int(key[0]), int(key[1]))
+                    self.maze[key] = val
+        else:
+            print('Maze file not found.')
 
     def draw_solver_open(self):
         for x, y in self.solver.open:
@@ -146,12 +150,12 @@ class Visualizer:
                         self.debug = not self.debug
 
                     if event.key == pygame.K_PERIOD:
-                        self.frame_time -= 0.01
-                        if self.frame_time < 0:
-                            self.frame_time = 0
+                        self.frame_time = max(round(self.frame_time - 0.01, 2), 0)
+                        print(f'Frame time set to: {self.frame_time}')
 
                     if event.key == pygame.K_COMMA:
-                        self.frame_time += 0.01
+                        self.frame_time = round(self.frame_time + 0.01, 2)
+                        print(f'Frame time set to: {self.frame_time}')
 
                     if not start:
                         if event.key == pygame.K_s and (pygame.key.get_mods() & pygame.KMOD_CTRL):
@@ -187,6 +191,14 @@ class Visualizer:
 
                 if event.type == pygame.MOUSEWHEEL and (pygame.key.get_mods() & pygame.KMOD_CTRL):
                     self.outlineWidth += event.y
+                    if self.outlineWidth < -1:
+                        self.outlineWidth = -1
+
+                    if self.outlineWidth == 0:
+                        if event.y > 0:
+                            self.outlineWidth = 1
+                        else:
+                            self.outlineWidth = -1
 
             if self.keys['left_mouse_held']:
                 mouse_tile_clicked = (mx // self.tileSize, my // self.tileSize)
@@ -245,8 +257,8 @@ class Visualizer:
 if __name__ == '__main__':
     Visualizer(
         frame_time = 0.04,
-        maze_sizeX = 20,
-        maze_sizeY = 20,
-        tileSize   = 45,
+        maze_sizeX = 75,
+        maze_sizeY = 40,
+        tileSize   = 25,
         diagonals  = True,
     ).run()
