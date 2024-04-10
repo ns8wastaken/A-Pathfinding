@@ -5,6 +5,12 @@ import random
 def _round(x: float):
     return int(x + 0.5)
 
+class Node:
+    def __init__(self, parent: tuple[int, int]):
+        self.parent = parent
+        self.g = float('inf')
+        self.h = float('inf')
+
 class AStarSolver:
     def __init__(
             self,
@@ -20,8 +26,8 @@ class AStarSolver:
         self.start = start
         self.end = end
 
-        self.open: dict[tuple[int, int], tuple[int, int]] = {self.start: self.start}
-        self.closed: dict[tuple[int, int], tuple[int, int]] = dict()
+        self.open: dict[tuple[int, int], Node] = {self.start: Node(parent=self.start)}
+        self.closed: dict[tuple[int, int], Node] = dict()
         self.path = []
 
         self.no_path = False
@@ -43,10 +49,10 @@ class AStarSolver:
 
     def update_start(self, start: tuple[int, int]):
         self.start = start
-        self.open = {self.start: self.start}
+        self.open = {self.start: Node(parent=self.start)}
 
     def reset(self):
-        self.open = {self.start: self.start}
+        self.open = {self.start: Node(parent=self.start)}
         self.closed.clear()
         self.path.clear()
         self.no_path = False
@@ -54,7 +60,7 @@ class AStarSolver:
         self.done2 = False
 
     def get_path(self, coords: tuple[int, int]):
-        if (next_coords := self.closed[coords]) != coords:
+        if (next_coords := self.closed[coords].parent) != coords:
             self.path.append(coords)
             self.get_path(next_coords)
 
@@ -63,7 +69,7 @@ class AStarSolver:
 
         self.done2 = True
 
-    def get_neighbors(self, coords: tuple[int, int]):
+    def update_neighbors(self, coords: tuple[int, int]):
         neighbor_offsets = (
             (-1, -1), (0, -1), (1, -1),
             (1, 0), (1, 1), (0, 1),
@@ -75,18 +81,21 @@ class AStarSolver:
         for dx, dy in neighbor_offsets:
             neighbor_pos = (coords[0] + dx, coords[1] + dy)
 
-            # Skip if the neighbor is opened or closed already
+            # Skip if the neighbor is closed
             if neighbor_pos in self.closed:
                 continue
 
             # Re-parent the node if the g cost is lower than before
             elif neighbor_pos in self.open:
-                if self.get_g(neighbor_pos) > self.get_g(coords) + (self.cost_diagonal if self.is_diagonal(coords, neighbor_pos) else self.cost_orthogonal):
-                    self.open[neighbor_pos] = coords
+                neighbor_node = self.open[neighbor_pos]
+                if neighbor_node.g > (new_g := self.closed[coords].g + (self.cost_diagonal if self.is_diagonal(coords, neighbor_pos) else self.cost_orthogonal)):
+                    neighbor_node.parent = coords
+                    neighbor_node.g = new_g
 
-            # Yield the neighbor's pos if it is in the maze and not a wall
+            # Update the open list if the new node is simply undiscovered and not a wall
             elif neighbor_pos in self.maze and self.maze[neighbor_pos] == False:
-                yield (neighbor_pos, coords)
+                self.open.update({neighbor_pos: Node(parent=coords)})
+                self.open[neighbor_pos].h = self.get_h(self.mode, neighbor_pos)
 
     def is_diagonal(self, _from: tuple[int, int], _to: tuple[int, int]):
         return (_to[0] - _from[0] != 0) and (_to[1] - _from[1] != 0)
@@ -111,74 +120,62 @@ class AStarSolver:
         cost = 0
 
         current_coords = coords
-        if current_coords in self.open: next_coords = self.open[current_coords]
-        else:                           next_coords = self.closed[current_coords]
+        if current_coords in self.open: next_coords = self.open[current_coords].parent
+        else:                           next_coords = self.closed[current_coords].parent
 
         while current_coords != next_coords:
             next_coords = current_coords
 
             if current_coords in self.open:
-                current_coords = self.open[current_coords]
+                current_coords = self.open[current_coords].parent
 
             else:
-                current_coords = self.closed[current_coords]
+                current_coords = self.closed[current_coords].parent
 
             cost += self.cost_diagonal if self.is_diagonal(current_coords, next_coords) else self.cost_orthogonal
 
         return cost
 
     def choose_next_tile(self):
-        # Stop if done
-        if self.end in self.closed:
-            self.done1 = True
-            return
-
-        # Stop if there is no path
-        elif not self.open:
+        if not self.open:
             self.no_path = True
             return
 
-        # Get smallest f and h costs
-        min_f = float('inf')
-        min_h = float('inf')
-        min_coords_f: list[tuple[int, int]] = []
-        coords_h: list[tuple[int, int]] = []
+        elif self.end in self.closed:
+            self.done1 = True
+            return
 
-        _f = []
-        for coords in self.open:
-            g = _round(self.get_g(coords))
-            h = _round(self.get_h(self.mode, coords))
-            f = g + h
-            _f.append(f)
+        min_f = float('inf')
+        min_f_coords = (0, 0)
+
+        min_h = float('inf')
+        min_h_coords: list[tuple[int, int]] = []
+
+        for coords, node in self.open.items():
+            if node.g == float('inf'): node.g = self.get_g(coords)
+            if node.h == float('inf'): node.h = self.get_h(self.mode, coords)
+
+            f = node.g + node.h
 
             if f < min_f:
                 min_f = f
-                min_coords_f = [coords]
+                min_f_coords = coords
 
-                if h < min_h:
-                    min_h = h
-                    coords_h = [coords]
-
-                elif h == min_h:
-                    coords_h.append(coords)
+                min_h = node.h
+                min_h_coords = [coords]
 
             elif f == min_f:
-                min_coords_f.append(coords)
+                if node.h < min_h:
+                    min_h = node.h
+                    min_h_coords = [coords]
 
-                if h < min_h:
-                    min_h = h
-                    coords_h = [coords]
+                elif node.h == min_h:
+                    min_h_coords.append(coords)
 
-                elif h == min_h:
-                    coords_h.append(coords)
-
-        # Close the chosen open node (based on f cost)
-        if len(min_coords_f) == 1:
-            self.closed.update({min_coords_f[0]: self.open.pop(min_coords_f[0])})
-            self.open.update(self.get_neighbors(min_coords_f[0]))
-
-        # Close the chosen open node (based on h cost)
+        if len(min_h_coords) > 1:
+            current = random.choice(min_h_coords)
         else:
-            coords = random.choice(coords_h)
-            self.closed.update({coords: self.open.pop(coords)})
-            self.open.update(self.get_neighbors(coords))
+            current = min_f_coords
+
+        self.closed.update({current: self.open.pop(current)})
+        self.update_neighbors(current)
