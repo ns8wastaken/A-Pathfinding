@@ -15,7 +15,7 @@ class Visualizer:
 
         pygame.init()
         pygame.display.set_caption('A* Visualizer')
-        pygame.display.set_icon(pygame.image.load('icon.png'))
+        pygame.display.set_icon(pygame.image.load(os.path.split(__file__)[0] + '\\icon.png'))
         self.frame_time = frame_time
         self.substeps = 1
 
