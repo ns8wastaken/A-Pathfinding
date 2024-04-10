@@ -14,6 +14,7 @@ class Node:
 class AStarSolver:
     def __init__(
             self,
+            maze_size: tuple[int, int],
             walls: set[tuple[int, int]],
             start: tuple[int, int],
             end: tuple[int, int],
@@ -21,6 +22,7 @@ class AStarSolver:
             diagonals: bool
         ):
 
+        self.maze_size = maze_size
         self.walls = walls
 
         self.start = start
@@ -59,6 +61,9 @@ class AStarSolver:
         self.done1 = False
         self.done2 = False
 
+    def is_in_maze(self, coords: tuple[int, int]):
+        return (0 <= coords[0] < self.maze_size[0]) and (0 <= coords[1] < self.maze_size[1])
+
     def get_path(self, coords: tuple[int, int]):
         if (next_coords := self.closed[coords].parent) != coords:
             self.path.append(coords)
@@ -93,7 +98,7 @@ class AStarSolver:
                     neighbor_node.g = new_g
 
             # Update the open list if the new node is simply undiscovered and not a wall
-            elif neighbor_pos not in self.walls:
+            elif neighbor_pos not in self.walls and self.is_in_maze(neighbor_pos):
                 self.open.update({neighbor_pos: Node(parent=coords)})
                 self.open[neighbor_pos].h = self.get_h(self.mode, neighbor_pos)
 
@@ -137,14 +142,14 @@ class AStarSolver:
         return cost
 
     def choose_next_tile(self):
-        # Stop if there is no path
-        if not self.open:
-            self.no_path = True
+        # Stop if done
+        if self.end in self.closed:
+            self.done1 = True
             return
 
-        # Stop if done
-        elif self.end in self.closed:
-            self.done1 = True
+        # Stop if there is no path
+        elif not self.open:
+            self.no_path = True
             return
 
         min_f = float('inf')
