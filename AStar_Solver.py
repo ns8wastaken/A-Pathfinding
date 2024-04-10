@@ -18,8 +18,7 @@ class AStarSolver:
             walls: set[tuple[int, int]],
             start: tuple[int, int],
             end: tuple[int, int],
-            mode: Literal['manhattan', 'diagonal', 'euclidean', 'dijkstra'],
-            diagonals: bool
+            mode: Literal['manhattan', 'diagonal', 'euclidean', 'dijkstra']
         ):
 
         self.maze_size = maze_size
@@ -38,8 +37,6 @@ class AStarSolver:
 
         self.cost_orthogonal = 10
         self.cost_diagonal = 14
-
-        self.diagonals = diagonals
 
         self.mode: Literal['manhattan', 'diagonal', 'euclidean', 'dijkstra'] = mode
 
@@ -79,8 +76,6 @@ class AStarSolver:
             (-1, -1), (0, -1), (1, -1),
             (1, 0), (1, 1), (0, 1),
             (-1, 1), (-1, 0)
-        ) if self.diagonals else (
-            (0, -1), (1, 0), (0, 1), (-1, 0)
         )
 
         for dx, dy in neighbor_offsets:
