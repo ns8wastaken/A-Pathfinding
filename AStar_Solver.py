@@ -14,14 +14,14 @@ class Node:
 class AStarSolver:
     def __init__(
             self,
-            maze: dict[tuple[int, int], bool],
+            walls: set[tuple[int, int]],
             start: tuple[int, int],
             end: tuple[int, int],
             mode: Literal['manhattan', 'diagonal', 'euclidean', 'dijkstra'],
             diagonals: bool
         ):
 
-        self.maze = maze
+        self.walls = walls
 
         self.start = start
         self.end = end
@@ -44,8 +44,8 @@ class AStarSolver:
     def set_mode(self, mode: Literal['manhattan', 'diagonal', 'euclidean', 'dijkstra']):
         self.mode = mode
 
-    def update_maze(self, maze: dict[tuple[int, int], bool]):
-        self.maze = maze
+    def update_walls(self, walls: set[tuple[int, int]]):
+        self.walls = walls
 
     def update_start(self, start: tuple[int, int]):
         self.start = start
@@ -93,7 +93,7 @@ class AStarSolver:
                     neighbor_node.g = new_g
 
             # Update the open list if the new node is simply undiscovered and not a wall
-            elif neighbor_pos in self.maze and self.maze[neighbor_pos] == False:
+            elif neighbor_pos not in self.walls:
                 self.open.update({neighbor_pos: Node(parent=coords)})
                 self.open[neighbor_pos].h = self.get_h(self.mode, neighbor_pos)
 
@@ -137,10 +137,12 @@ class AStarSolver:
         return cost
 
     def choose_next_tile(self):
+        # Stop if there is no path
         if not self.open:
             self.no_path = True
             return
 
+        # Stop if done
         elif self.end in self.closed:
             self.done1 = True
             return
@@ -151,6 +153,7 @@ class AStarSolver:
         min_h = float('inf')
         min_h_coords: list[tuple[int, int]] = []
 
+        # Get smallest f and h
         for coords, node in self.open.items():
             if node.g == float('inf'): node.g = self.get_g(coords)
             if node.h == float('inf'): node.h = self.get_h(self.mode, coords)
@@ -172,6 +175,7 @@ class AStarSolver:
                 elif node.h == min_h:
                     min_h_coords.append(coords)
 
+        # If there is more than 1 possible node to be chosen, choose among the ones with the smallest h
         if len(min_h_coords) > 1:
             current = random.choice(min_h_coords)
         else:
