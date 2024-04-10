@@ -1,4 +1,4 @@
-import pygame, time, json, os
+import pygame, time, pickle, os
 from typing import Literal
 
 from AStar_Solver import AStarSolver
@@ -38,9 +38,9 @@ class Visualizer:
         ] = ('manhattan', 'diagonal', 'euclidean', 'dijkstra')
 
         # Maze stuff
-        self.maze: dict[tuple[int, int], bool] = {(x, y): False for y in range(self.maze_sizeY) for x in range(self.maze_sizeX)}
+        self.walls: set[tuple[int, int]] = set()
         self.solver = AStarSolver(
-            maze      = self.maze,
+            walls     = self.walls,
             start     = (0, 0),
             end       = (self.maze_sizeX - 1, self.maze_sizeY - 1),
             mode      = self.modes[self.mode],
@@ -59,19 +59,16 @@ class Visualizer:
         self.debug = False
 
     def save_maze(self):
-        with open('maze.json', 'w') as f:
-            json.dump({f'{key[0]};{key[1]}': val for key, val in self.maze.items()}, f)
+        with open('walls.pkl', 'wb') as f:
+            pickle.dump(self.walls, f)
 
     def load_maze(self):
-        if os.path.exists('maze.json'):
-            with open('maze.json', 'r') as f:
-                self.maze.clear()
-                for key, val in json.load(f).items():
-                    key = key.split(';')
-                    key = (int(key[0]), int(key[1]))
-                    self.maze[key] = val
+        if os.path.exists('walls.pkl'):
+            with open('walls.pkl', 'rb') as f:
+                self.walls = pickle.load(f)
+
         else:
-            print('Maze file not found.')
+            print('walls.pkl not found.')
 
     def draw_solver_open(self):
         for x, y in self.solver.open:
@@ -93,14 +90,14 @@ class Visualizer:
         pygame.draw.rect(self.screen, (0, 255, 0), (self.solver.start[0] * self.tileSize, self.solver.start[1] * self.tileSize, self.tileSize, self.tileSize))
         pygame.draw.rect(self.screen, (255, 0, 0), (self.solver.end[0] * self.tileSize, self.solver.end[1] * self.tileSize, self.tileSize, self.tileSize))
 
-        for coords, is_wall in self.maze.items():
-            if is_wall:
-                # Draw walls
-                pygame.draw.rect(self.screen, (0, 0, 0), (coords[0] * self.tileSize, coords[1] * self.tileSize, self.tileSize, self.tileSize))
+        # Draw walls
+        for wall in self.walls:
+            pygame.draw.rect(self.screen, (0, 0, 0), (wall[0] * self.tileSize, wall[1] * self.tileSize, self.tileSize, self.tileSize))
 
-            else:
-                # Draw tile outlines
-                pygame.draw.rect(self.screen, (0, 0, 0), (coords[0] * self.tileSize, coords[1] * self.tileSize, self.tileSize, self.tileSize), width=self.outlineWidth)
+        # Draw tile outlines
+        for x in range(self.maze_sizeX):
+            for y in range(self.maze_sizeY):
+                pygame.draw.rect(self.screen, (0, 0, 0), (x * self.tileSize, y * self.tileSize, self.tileSize, self.tileSize), width=self.outlineWidth)
 
     def run(self):
         clock = pygame.time.Clock()
@@ -136,9 +133,9 @@ class Visualizer:
                         start = False
 
                     if event.key == pygame.K_ESCAPE:
-                        self.maze = {(x, y): False for y in range(self.maze_sizeY) for x in range(self.maze_sizeX)}
+                        self.walls.clear()
                         self.solver.reset()
-                        self.solver.update_maze(self.maze)
+                        self.solver.update_walls(self.walls)
                         start = False
 
                     if event.key == pygame.K_TAB:
@@ -148,14 +145,6 @@ class Visualizer:
 
                     if event.key == pygame.K_d:
                         self.debug = not self.debug
-
-                    if event.key == pygame.K_PERIOD:
-                        self.frame_time = max(round(self.frame_time - 0.01, 2), 0)
-                        print(f'Frame time set to: {self.frame_time}')
-
-                    if event.key == pygame.K_COMMA:
-                        self.frame_time = round(self.frame_time + 0.01, 2)
-                        print(f'Frame time set to: {self.frame_time}')
 
                     if not start:
                         if event.key == pygame.K_s and (pygame.key.get_mods() & pygame.KMOD_CTRL):
@@ -183,29 +172,42 @@ class Visualizer:
                     if event.type == pygame.MOUSEBUTTONUP:
                         if event.button == 1:
                             self.keys['left_mouse_held'] = False
-                            self.solver.update_maze(self.maze)
+                            self.solver.update_walls(self.walls)
 
                         if event.button == 3:
                             self.keys['right_mouse_held'] = False
-                            self.solver.update_maze(self.maze)
+                            self.solver.update_walls(self.walls)
 
-                if event.type == pygame.MOUSEWHEEL and (pygame.key.get_mods() & pygame.KMOD_CTRL):
-                    self.outlineWidth += event.y
-                    if self.outlineWidth < -1:
-                        self.outlineWidth = -1
-
-                    if self.outlineWidth == 0:
-                        if event.y > 0:
-                            self.outlineWidth = 1
-                        else:
+                if event.type == pygame.MOUSEWHEEL:
+                    # Handle outline width if pressing ctrl
+                    if pygame.key.get_mods() & pygame.KMOD_CTRL:
+                        self.outlineWidth += event.y
+                        if self.outlineWidth < -1:
                             self.outlineWidth = -1
+
+                        if self.outlineWidth == 0:
+                            if event.y > 0:
+                                self.outlineWidth = 1
+                            else:
+                                self.outlineWidth = -1
+
+                    # Otherwise handle frametime (speed)
+                    elif event.y > 0:
+                        self.frame_time = max(round(self.frame_time - 0.01, 2), 0)
+                        print(f'Frame time set to: {self.frame_time}')
+
+                    else:
+                        self.frame_time = round(self.frame_time + 0.01, 2)
+                        print(f'Frame time set to: {self.frame_time}')
 
             if self.keys['left_mouse_held']:
                 mouse_tile_clicked = (mx // self.tileSize, my // self.tileSize)
-                self.maze[mouse_tile_clicked] = True
+                if mouse_tile_clicked not in self.walls:
+                    self.walls.add(mouse_tile_clicked)
             elif self.keys['right_mouse_held']:
                 mouse_tile_clicked = (mx // self.tileSize, my // self.tileSize)
-                self.maze[mouse_tile_clicked] = False
+                if mouse_tile_clicked in self.walls:
+                    self.walls.remove(mouse_tile_clicked)
 
             self.screen.fill((255, 255, 255))
 
@@ -225,7 +227,7 @@ class Visualizer:
                 True, (200, 125, 50)
             ), (2, 2))
 
-            # Display time per frame
+            # Display speed
             self.screen.blit(self.info_font.render(
                 'Speed: ' + str(round(1 / self.frame_time, 3)) if self.frame_time != 0 else 'unlimited',
                 True, (200, 125, 50)
@@ -257,8 +259,8 @@ class Visualizer:
 if __name__ == '__main__':
     Visualizer(
         frame_time = 0.04,
-        maze_sizeX = 75,
-        maze_sizeY = 40,
+        maze_sizeX = 70,
+        maze_sizeY = 35,
         tileSize   = 25,
         diagonals  = True,
     ).run()
