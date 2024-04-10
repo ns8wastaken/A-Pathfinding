@@ -9,8 +9,7 @@ class Visualizer:
             frame_time: float,
             maze_sizeX: int,
             maze_sizeY: int,
-            tileSize: int,
-            diagonals: bool,
+            tileSize: int
         ):
 
         pygame.init()
@@ -25,8 +24,6 @@ class Visualizer:
 
         self.maze_sizeX = maze_sizeX
         self.maze_sizeY = maze_sizeY
-
-        self.diagonals = diagonals
 
         self.screen = pygame.display.set_mode((self.maze_sizeX * self.tileSize, self.maze_sizeY * self.tileSize))
 
@@ -45,8 +42,7 @@ class Visualizer:
             walls     = self.walls,
             start     = (0, 0),
             end       = (self.maze_sizeX - 1, self.maze_sizeY - 1),
-            mode      = self.modes[self.mode],
-            diagonals = self.diagonals
+            mode      = self.modes[self.mode]
         )
 
         # Pressed keys
@@ -283,5 +279,4 @@ if __name__ == '__main__':
         maze_sizeX = 70,
         maze_sizeY = 35,
         tileSize   = 25,
-        diagonals  = True,
     ).run()
