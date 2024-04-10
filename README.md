@@ -22,6 +22,9 @@
 <h3>Change heuristics mode:</h3>
 <kbd>Tab</kbd> / <kbd>Shift Tab</kbd>
 
+<h3>Change speed:</h3>
+<kbd>Mouse scroll</kbd>
+
 <h3>Toggle debug mode:</h3>
 <kbd>D</kbd>
 
