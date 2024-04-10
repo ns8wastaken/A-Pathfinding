@@ -251,7 +251,7 @@ class Visualizer:
             ), (2, 22))
 
             if self.debug:
-                for coords in self.solver.open | self.solver.closed:
+                for coords in self.solver.open.keys() | self.solver.closed.keys():
                     g, h = self.solver.get_g(coords), self.solver.get_h(self.modes[self.mode], coords)
                     self.screen.blit(self.debug_font.render(
                         str(round(g + h)),
