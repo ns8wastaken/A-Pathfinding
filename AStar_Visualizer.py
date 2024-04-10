@@ -17,10 +17,11 @@ class Visualizer:
         pygame.display.set_caption('A* Visualizer')
         pygame.display.set_icon(pygame.image.load('icon.png'))
         self.frame_time = frame_time
+        self.substeps = 1
 
         # Setup
         self.tileSize = tileSize
-        self.outlineWidth = 2
+        self.outlineWidth = 1
 
         self.maze_sizeX = maze_sizeX
         self.maze_sizeY = maze_sizeY
@@ -40,6 +41,7 @@ class Visualizer:
         # Maze stuff
         self.walls: set[tuple[int, int]] = set()
         self.solver = AStarSolver(
+            maze_size = (self.maze_sizeX, self.maze_sizeY),
             walls     = self.walls,
             start     = (0, 0),
             end       = (self.maze_sizeX - 1, self.maze_sizeY - 1),
@@ -66,6 +68,8 @@ class Visualizer:
         if os.path.exists('walls.pkl'):
             with open('walls.pkl', 'rb') as f:
                 self.walls = pickle.load(f)
+
+            self.solver.update_walls(self.walls)
 
         else:
             print('walls.pkl not found.')
@@ -191,14 +195,30 @@ class Visualizer:
                             else:
                                 self.outlineWidth = -1
 
-                    # Otherwise handle frametime (speed)
-                    elif event.y > 0:
-                        self.frame_time = max(round(self.frame_time - 0.01, 2), 0)
-                        print(f'Frame time set to: {self.frame_time}')
-
+                    # Otherwise handle frame time (speed) and substeps
                     else:
-                        self.frame_time = round(self.frame_time + 0.01, 2)
-                        print(f'Frame time set to: {self.frame_time}')
+                        # Substeps
+                        if self.frame_time == 0:
+                            if event.y > 0:
+                                self.substeps += 1
+
+                                if self.substeps > 25:
+                                    self.substeps = 25
+
+                            else:
+                                self.substeps -= 1
+
+                                if self.substeps < 1:
+                                    self.substeps = 1
+                                    self.frame_time += 0.01
+
+                        # Frame time
+                        else:
+                            if event.y > 0:
+                                self.frame_time = max(round(self.frame_time - 0.01, 2), 0)
+
+                            else:
+                                self.frame_time = round(self.frame_time + 0.01, 2)
 
             if self.keys['left_mouse_held']:
                 mouse_tile_clicked = (mx // self.tileSize, my // self.tileSize)
@@ -211,15 +231,16 @@ class Visualizer:
 
             self.screen.fill((255, 255, 255))
 
+            for _ in range(self.substeps):
+                if start and dt > self.frame_time:
+                    if not self.solver.no_path:
+                        if not self.solver.done1:
+                            self.solver.choose_next_tile()
+
+                        elif not self.solver.done2:
+                            self.solver.get_path(self.solver.end)
+
             self.draw_maze()
-
-            if start and dt > self.frame_time:
-                if not self.solver.no_path:
-                    if not self.solver.done1:
-                        self.solver.choose_next_tile()
-
-                    elif not self.solver.done2:
-                        self.solver.get_path(self.solver.end)
 
             # Display mode
             self.screen.blit(self.info_font.render(
@@ -229,7 +250,7 @@ class Visualizer:
 
             # Display speed
             self.screen.blit(self.info_font.render(
-                'Speed: ' + str(round(1 / self.frame_time, 3)) if self.frame_time != 0 else 'unlimited',
+                'Speed: ' + str(round(1 / self.frame_time, 3)) if self.frame_time != 0 else 'unlimited' if self.substeps == 1 else f'unlimited x{self.substeps}',
                 True, (200, 125, 50)
             ), (2, 22))
 
